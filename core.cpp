@@ -35,13 +35,13 @@ std::string GetAccess_Token(){
     if (infile.is_open()) infile>>result;
     else if(!infile.is_open()){
         infile.close();
-
-        infile.open("access_token",std::fstream::out);
-        if(!infile.is_open()) return "Could not create file, please check permissions";
+        std::fstream outfile;
+        outfile.open("access_token",std::fstream::out);
+        if(!outfile.is_open()) return "Could not create file, please check permissions";
         std::cout<<"Please enter your access_token, you can find it on https://www.pushbullet.com under Account Settings\n";
         getline(std::cin,result);
-        infile<<result;
-        infile.close();
+        outfile<<result;
+        outfile.close();
     }
     return result;
 }
