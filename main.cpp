@@ -5,18 +5,14 @@
 
 #include "core.h"
 
-using namespace std;
-using std::fstream;
-using namespace rapidjson;
-
 int main(int argc, char *argv[])
 {
     //initialize the variables
     string 	pushbulleturl = "https://api.pushbullet.com/v2/users/me",pushbulletdevices = "https://api.pushbullet.com/v2/devices",pushbulletpushes ="https://api.pushbullet.com/v2/pushes",
-        pushbulletwebsocket = "wss://stream.pushbullet.com/websocket/", OPO="ufeWjfqsjAiVsKnSTs",push = "{\"device_iden\":\"ufeWjfqsjAiVsKnSTs\", \"type\": \"note\", \"title\": \"NOOOICCCE\", \"body\": \"Aint that cool\"}";
+            pushbulletwebsocket = "wss://stream.pushbullet.com/websocket/", OPO="ufeWjfqsjAiVsKnSTs",push = "{\"device_iden\":\"ufeWjfqsjAiVsKnSTs\", \"type\": \"note\", \"title\": \"NOOOICCCE\", \"body\": \"Aint that cool\"}";
     char base[]  = "https://api.pushbullet.com/v2/users/me";
 
-    access_token = GetAccess_Token();
+    access_token = getAccessToken();
 
     //initialize curl MUST BE DONE ONCE
     curl_global_init( CURL_GLOBAL_ALL );
@@ -86,5 +82,5 @@ int main(int argc, char *argv[])
 
 
     }
-return 0;
+    return 0;
 }

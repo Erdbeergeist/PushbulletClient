@@ -13,7 +13,9 @@
 #include "sys/types.h"
 #include <fstream>
 
-
+using namespace std;
+using std::fstream;
+using namespace rapidjson;
 
 //important Flags and Variables
 extern char JSONcontent[];
@@ -26,7 +28,7 @@ std::string GetFullURL(std::string identifier);
 
 
 
-std::string GetAccess_Token();
+string getAccessToken();
 
 //Buffer Struct to hold the Result
 struct BufferStruct{
@@ -43,18 +45,18 @@ struct AuthorizationHeader{
 
 
 class CustomHTTPHeader{
-    public:
-        CustomHTTPHeader(CURL* curl, AuthorizationHeader AuthHeader);
-        CustomHTTPHeader(CURL* curl, AuthorizationHeader AuthHeader, std::vector<std::string> additionalArguemnts);
-        ~CustomHTTPHeader();
-        void SetAdditionalArguments(std::vector<std::string> additionalArguemnts);
-        CURLcode SetCustomHeader();
+public:
+    CustomHTTPHeader(CURL* curl, AuthorizationHeader AuthHeader);
+    CustomHTTPHeader(CURL* curl, AuthorizationHeader AuthHeader, std::vector<std::string> additionalArguemnts);
+    ~CustomHTTPHeader();
+    void SetAdditionalArguments(std::vector<std::string> additionalArguemnts);
+    CURLcode SetCustomHeader();
 
-    private:
-        AuthorizationHeader CurrentAuthHeader;
-        CURL* Currentcurl;
-        CURLcode result;
-        struct curl_slist* chunk;
+private:
+    AuthorizationHeader CurrentAuthHeader;
+    CURL* Currentcurl;
+    CURLcode result;
+    struct curl_slist* chunk;
 };
 
 

@@ -3,11 +3,11 @@
 //Set the Variables and Flags
 char JSONcontent[] = "Content-Type: application/json";
 std::string authorization_header = "Authorization: Bearer ",
-    access_token="",
-    pushbulletbaseurl = "https://api.pushbullet.com/v2/",
-    pb_devices = "devices",
-    pb_users = "users/me",
-    pb_pushes = "pushes";
+access_token="",
+pushbulletbaseurl = "https://api.pushbullet.com/v2/",
+pb_devices = "devices",
+pb_users = "users/me",
+pb_pushes = "pushes";
 
 // Function to pass to CURL, fills BufferStruct
 size_t WriteMemoryCallback(void *ptr, size_t size, size_t nmemb, void *data){
@@ -24,25 +24,46 @@ size_t WriteMemoryCallback(void *ptr, size_t size, size_t nmemb, void *data){
         mem->size += realsize;
         mem->buffer[ mem->size ] = 0;
     }
-return realsize;
+    return realsize;
 }
 
-std::string GetAccess_Token(){
-    std::fstream infile;
-    std::string result;
-    infile.open("access_token",std::fstream::in);
+/**
+ * @brief Retrieve acces token from file, or ask for it if no file exists
+ * @return Acces token
+ */
+string getAccessToken() {
+    fstream infile;
+    string result;
+    infile.open("access_token", fstream::in);
 
-    if (infile.is_open()) infile>>result;
-    else if(!infile.is_open()){
+    // If file already exists, return saved token
+    if (infile.is_open()) {
+        infile >> result;
         infile.close();
-        std::fstream outfile;
-        outfile.open("access_token",std::fstream::out);
-        if(!outfile.is_open()) return "Could not create file, please check permissions";
-        std::cout<<"Please enter your access_token, you can find it on https://www.pushbullet.com under Account Settings\n";
-        getline(std::cin,result);
-        outfile<<result;
-        outfile.close();
+        return result;
     }
+
+    fstream outfile;
+    outfile.open("access_token", fstream::out);
+    if (!outfile.is_open()) {
+        cout << "Could not create file, please check permissions!" << endl;
+        return "-1";
+    }
+
+    // Ask for token until valid input is given
+    bool firstTry = true;
+    do {
+        if (firstTry == true) {
+            cout << "Please enter your access_token, you can find it on https://www.pushbullet.com under Account Settings." << endl;
+            firstTry = false;
+        } else {
+            cout << "Incorrect token, please try again!" << endl;
+        }
+        getline(cin, result);
+        outfile << result;
+        outfile.close();
+    } while (result.length() != 32);
+
     return result;
 }
 
