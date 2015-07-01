@@ -11,6 +11,7 @@
 #include "rapidjson/document.h"
 #include "rapidjson/reader.h"
 #include "sys/types.h"
+#include <fstream>
 
 
 
@@ -22,6 +23,10 @@ extern std::string authorization_header,access_token,pushbulletbaseurl,pb_device
 size_t WriteMemoryCallback(void *ptr, size_t size, size_t nmemb, void *data);
 
 std::string GetFullURL(std::string identifier);
+
+
+
+std::string GetAccess_Token();
 
 //Buffer Struct to hold the Result
 struct BufferStruct{

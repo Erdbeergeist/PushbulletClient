@@ -3,7 +3,7 @@
 //Set the Variables and Flags
 char JSONcontent[] = "Content-Type: application/json";
 std::string authorization_header = "Authorization: Bearer ",
-    access_token="ryAiaLYna3gqZNAMBgFkDBpR2v5uuqi2",
+    access_token="",
     pushbulletbaseurl = "https://api.pushbullet.com/v2/",
     pb_devices = "devices",
     pb_users = "users/me",
@@ -25,6 +25,25 @@ size_t WriteMemoryCallback(void *ptr, size_t size, size_t nmemb, void *data){
         mem->buffer[ mem->size ] = 0;
     }
 return realsize;
+}
+
+std::string GetAccess_Token(){
+    std::fstream infile;
+    std::string result;
+    infile.open("access_token",std::fstream::in);
+
+    if (infile.is_open()) infile>>result;
+    else if(!infile.is_open()){
+        infile.close();
+
+        infile.open("access_token",std::fstream::out);
+        if(!infile.is_open()) return "Could not create file, please check permissions";
+        std::cout<<"Please enter your access_token, you can find it on https://www.pushbullet.com under Account Settings\n";
+        getline(std::cin,result);
+        infile<<result;
+        infile.close();
+    }
+    return result;
 }
 
 std::string GetFullURL(std::string identifier){
