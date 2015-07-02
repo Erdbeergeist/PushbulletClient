@@ -1,4 +1,5 @@
 // sudo apt-get install libcurl4-gnutls-dev
+// sudo apt-get install libboost-all-dev
 // https://github.com/miloyip/rapidjson/ (copy 'rapidjason-master/inlcude/rapidjson' folder into /usr/include/)
 
 //#include <QCoreApplication>
