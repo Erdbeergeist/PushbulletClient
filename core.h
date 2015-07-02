@@ -19,12 +19,12 @@ using namespace rapidjson;
 
 //important Flags and Variables
 extern char JSONcontent[];
-extern std::string authorization_header,access_token,pushbulletbaseurl,pb_devices,pb_users,pb_pushes;
+extern string authorization_header,access_token,pushbulletbaseurl,pb_devices,pb_users,pb_pushes;
 
 //Callback Function for CURL
 size_t WriteMemoryCallback(void *ptr, size_t size, size_t nmemb, void *data);
 
-std::string GetFullURL(std::string identifier);
+string GetFullURL(string identifier);
 
 
 
@@ -39,17 +39,17 @@ struct BufferStruct{
 
 //Holds the neccessary Information to authenticate
 struct AuthorizationHeader{
-    std::string prefix;
-    std::string access_token;
+    string prefix;
+    string access_token;
 };
 
 
 class CustomHTTPHeader{
 public:
     CustomHTTPHeader(CURL* curl, AuthorizationHeader AuthHeader);
-    CustomHTTPHeader(CURL* curl, AuthorizationHeader AuthHeader, std::vector<std::string> additionalArguemnts);
+    CustomHTTPHeader(CURL* curl, AuthorizationHeader AuthHeader, vector<string> additionalArguemnts);
     ~CustomHTTPHeader();
-    void SetAdditionalArguments(std::vector<std::string> additionalArguemnts);
+    void SetAdditionalArguments(vector<string> additionalArguemnts);
     CURLcode SetCustomHeader();
 
 private:
