@@ -29,6 +29,10 @@ int main(int argc, char *argv[])
         //cout<<AuthHeader.authorization<<endl;
         CustomHTTPHeader header(curl, AuthHeader);
 
+        //Websocket_Endpoint endpoint;
+
+
+
         result = header.SetCustomHeader();
 
         curl_easy_setopt(curl, CURLOPT_URL, GetFullURL(pb_users).c_str());
@@ -73,9 +77,14 @@ int main(int argc, char *argv[])
 
         user.Parse(output.buffer);
         cout<<output.buffer<<endl;
+        bool quit=false;
+        string input;
+        while (!quit) {
+                std::cout << "Enter Command: ";
+                std::getline(std::cin, input);
 
-
-
+                if (input == "quit") quit = true;
+        }
 
 
     }
