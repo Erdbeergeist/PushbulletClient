@@ -8,10 +8,6 @@
 
 int main(int argc, char *argv[])
 {
-    //initialize the variables
-    string 	pushbulleturl = "https://api.pushbullet.com/v2/users/me",pushbulletdevices = "https://api.pushbullet.com/v2/devices",pushbulletpushes ="https://api.pushbullet.com/v2/pushes",
-            pushbulletwebsocket = "wss://stream.pushbullet.com/websocket/", OPO="ufeWjfqsjAiVsKnSTs",push = "{\"device_iden\":\"ufeWjfqsjAiVsKnSTs\", \"type\": \"note\", \"title\": \"NOOOICCCE\", \"body\": \"Aint that cool\"}";
-    char base[]  = "https://api.pushbullet.com/v2/users/me";
 
     access_token = getAccessToken();
 

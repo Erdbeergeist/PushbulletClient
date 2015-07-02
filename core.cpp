@@ -5,6 +5,7 @@ char JSONcontent[] = "Content-Type: application/json";
 std::string authorization_header = "Authorization: Bearer ",
 access_token="",
 pushbulletbaseurl = "https://api.pushbullet.com/v2/",
+pushbulletwebsocket = "wss://stream.pushbullet.com/websocket/",
 pb_devices = "devices",
 pb_users = "users/me",
 pb_pushes = "pushes";
