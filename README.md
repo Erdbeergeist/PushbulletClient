@@ -5,7 +5,9 @@ users the ability to use our core.cpp & core.h to create their own applications.
 
 Dependencies:
   - libcurl (libcurl4-gnutls-dev)
+  - libboost
   - https://github.com/miloyip/rapidjson/
+
 
 Development Roadmad:
 
