@@ -14,7 +14,7 @@ CONFIG   -= app_bundle
 
 TEMPLATE = app
 
-LIBS = -lcurl
+LIBS = -lcurl -lboost_system
 
 
 SOURCES += main.cpp \
