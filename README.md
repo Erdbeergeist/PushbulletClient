@@ -3,10 +3,11 @@
 This Project aims at providing a simple console client for https://www.pushbullet.com/, while also giving potential
 users the ability to use our core.cpp & core.h to create their own applications.
 
-Dependencies:
+Dependencies (to build):
   - libcurl (libcurl4-gnutls-dev)
   - libboost
   - https://github.com/miloyip/rapidjson/
+  - https://github.com/zaphoyd/websocketpp/
 
 
 Development Roadmad:
