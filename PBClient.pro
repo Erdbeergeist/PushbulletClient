@@ -16,7 +16,7 @@ CONFIG += c++11
 
 TEMPLATE = app
 
-LIBS = -lcurl -lboost_system -lboost_random -lboost_thread
+LIBS = -lcurl -lboost_system -lboost_random -lboost_thread -lssl -lcrypto
 
 SOURCES += main.cpp \
     core.cpp

@@ -9,7 +9,7 @@ pushbulletwebsocket = "wss://stream.pushbullet.com/websocket/",
 pb_devices = "devices",
 pb_users = "users/me",
 pb_pushes = "pushes";
-
+vector<string> pbmessages;
 // Function to pass to CURL, fills BufferStruct
 size_t WriteMemoryCallback(void *ptr, size_t size, size_t nmemb, void *data){
 
@@ -68,7 +68,7 @@ string getAccessToken() {
     return result;
 }
 
-std::string GetFullURL(std::string identifier){
+string GetFullURL(string identifier){
     return pushbulletbaseurl.append(identifier);
 }
 
@@ -84,7 +84,7 @@ CustomHTTPHeader::CustomHTTPHeader(CURL* curl,AuthorizationHeader AuthHeader){
 
 }
 
-CustomHTTPHeader::CustomHTTPHeader(CURL* curl, AuthorizationHeader AuthHeader,std::vector<std::string> AdditionalArguments){
+CustomHTTPHeader::CustomHTTPHeader(CURL* curl, AuthorizationHeader AuthHeader,vector<string> AdditionalArguments){
     Currentcurl = curl;
     CurrentAuthHeader = AuthHeader;
     chunk = NULL;
@@ -96,7 +96,7 @@ CustomHTTPHeader::~CustomHTTPHeader(){
     curl_slist_free_all(chunk);
 };
 
-void CustomHTTPHeader::SetAdditionalArguments(std::vector<std::string> AdditionalArguments){
+void CustomHTTPHeader::SetAdditionalArguments(vector<string> AdditionalArguments){
     for (int i=0;i<AdditionalArguments.size();i++){
         chunk = curl_slist_append(chunk,AdditionalArguments[i].c_str());
     }
@@ -107,12 +107,167 @@ CURLcode CustomHTTPHeader::SetCustomHeader(){
     return result;
 }
 
-Websocket_Endpoint::Websocket_Endpoint(){
+Websocket_Endpoint::Websocket_Endpoint(): m_next_id(0){
     m_endpoint.clear_access_channels(websocketpp::log::alevel::all);
     m_endpoint.clear_error_channels(websocketpp::log::elevel::all);
 
     m_endpoint.init_asio();
     m_endpoint.start_perpetual();
-
+    m_endpoint.set_tls_init_handler([this](websocketpp::connection_hdl){
+        return websocketpp::lib::make_shared<boost::asio::ssl::context>(boost::asio::ssl::context::tlsv1);
+    });
+    //m_endpoint.set_tls_init_handler(bind(&type::on_tls_init,this,::_1));
     m_thread.reset(new websocketpp::lib::thread(&client::run,&m_endpoint));
+}
+
+context_ptr Websocket_Endpoint::on_tls_init(websocketpp::connection_hdl){
+     context_ptr ctx = websocketpp::lib::make_shared<boost::asio::ssl::context>(boost::asio::ssl::context::tlsv1);
+     try {
+                 ctx->set_options(boost::asio::ssl::context::default_workarounds |
+                                  boost::asio::ssl::context::no_sslv2 |
+                                  boost::asio::ssl::context::no_sslv3 |
+                                  boost::asio::ssl::context::single_dh_use);
+             } catch (std::exception& e) {
+                 std::cout << e.what() << std::endl;
+             }
+             return ctx;
+}
+
+int Websocket_Endpoint::Connect(const string &uri){
+
+    websocketpp::lib::error_code ec;
+
+           client::connection_ptr con = m_endpoint.get_connection(uri, ec);
+
+           if (ec) {
+               std::cout << "> Connect initialization error: " << ec.message() << std::endl;
+               return -1;
+           }
+               int new_id = m_next_id++;
+               Connection_Metadata::ptr metadata_ptr(new Connection_Metadata(new_id, con->get_handle(), uri));
+               m_connection_list[new_id] = metadata_ptr;
+
+               con->set_open_handler(websocketpp::lib::bind(&Connection_Metadata::On_Open,metadata_ptr,&m_endpoint,websocketpp::lib::placeholders::_1));
+               con->set_fail_handler(websocketpp::lib::bind(&Connection_Metadata::On_Fail,metadata_ptr,&m_endpoint,websocketpp::lib::placeholders::_1));
+               con->set_close_handler(websocketpp::lib::bind(&Connection_Metadata::On_Close,metadata_ptr,&m_endpoint,websocketpp::lib::placeholders::_1));
+               con->set_message_handler(websocketpp::lib::bind(&Connection_Metadata::On_Message,metadata_ptr,websocketpp::lib::placeholders::_1,websocketpp::lib::placeholders::_2));
+               m_endpoint.connect(con);
+
+              return new_id;
+
+}
+
+void Websocket_Endpoint::Close(int id, websocketpp::close::status::value code, string reason){
+    websocketpp::lib::error_code ec;
+
+        con_list::iterator metadata_it = m_connection_list.find(id);
+        if (metadata_it == m_connection_list.end()) {
+            std::cout << "> No connection found with id " << id << std::endl;
+            return;
+        }
+
+        m_endpoint.close(metadata_it->second->Get_Hdl(), code, "", ec);
+        if (ec) {
+            std::cout << "> Error initiating close: " << ec.message() << std::endl;
+        }
+}
+
+Websocket_Endpoint::~Websocket_Endpoint(){
+    m_endpoint.stop_perpetual();
+
+        for (con_list::const_iterator it = m_connection_list.begin(); it != m_connection_list.end(); ++it) {
+            if (it->second->Get_Status() != "Open") {
+                // Only close open connections
+                continue;
+            }
+
+            std::cout << "> Closing connection " << it->second->Get_Id() << std::endl;
+
+            websocketpp::lib::error_code ec;
+            m_endpoint.close(it->second->Get_Hdl(), websocketpp::close::status::going_away, "", ec);
+            if (ec) {
+                std::cout << "> Error closing connection " << it->second->Get_Id() << ": "
+                          << ec.message() << std::endl;
+            }
+        }
+
+        m_thread->join();
+}
+
+Connection_Metadata::ptr Websocket_Endpoint::Get_Metadata(int id) const {
+    con_list::const_iterator metadata_it = m_connection_list.find(id);
+            if (metadata_it == m_connection_list.end()) {
+                return Connection_Metadata::ptr();
+            } else {
+                return metadata_it->second;
+            }
+}
+
+Connection_Metadata::Connection_Metadata(int id, websocketpp::connection_hdl hdl, string uri):m_id(id),m_hdl(hdl),m_status("Connecting"),m_uri(uri),m_server("N/A"){
+
+}
+
+void Connection_Metadata::On_Open(client *c, websocketpp::connection_hdl hdl){
+    m_status = "Open";
+
+            client::connection_ptr con = c->get_con_from_hdl(hdl);
+            m_server = con->get_response_header("Server");
+}
+
+void Connection_Metadata::On_Fail(client *c, websocketpp::connection_hdl hdl){
+    m_status = "Failed";
+
+            client::connection_ptr con = c->get_con_from_hdl(hdl);
+            m_server = con->get_response_header("Server");
+            m_error_reason = con->get_ec().message();
+}
+
+void Connection_Metadata::On_Close(client *c, websocketpp::connection_hdl hdl){
+    m_status = "Closed";
+    client::connection_ptr con = c->get_con_from_hdl(hdl);
+    std::stringstream s;
+    s << "close code: " << con->get_remote_close_code() << " (" << websocketpp::close::status::get_string(con->get_remote_close_code()) << "), close reason: " << con->get_remote_close_reason();
+    m_error_reason = s.str();
+}
+
+void Connection_Metadata::On_Message(websocketpp::connection_hdl, client::message_ptr msg){
+    if (msg->get_opcode() == websocketpp::frame::opcode::text) {
+                m_messages.push_back("<< " + msg->get_payload());
+                pbmessages.push_back(msg->get_payload());
+            }
+    else {
+                m_messages.push_back("<< " + websocketpp::utility::to_hex(msg->get_payload()));
+            }
+}
+
+websocketpp::connection_hdl Connection_Metadata::Get_Hdl()const {
+    return m_hdl;
+}
+
+int Connection_Metadata::Get_Id() const{
+    return m_id;
+}
+
+string Connection_Metadata::Get_Status() const {
+    return m_status;
+}
+
+void Connection_Metadata::Record_Sent_Messages(string message){
+    m_messages.push_back(">> " + message);
+}
+
+
+ostream& operator<< (ostream & out, Connection_Metadata const& data){
+    out << "> URI: " << data.m_uri << "\n"
+        << "> Status: " << data.m_status << "\n"
+        << "> Remote Server: " << (data.m_server.empty() ? "None Specified" : data.m_server) << "\n"
+        << "> Error/close reason: " << (data.m_error_reason.empty() ? "N/A" : data.m_error_reason);
+    out << "> Messages Processed: (" << data.m_messages.size() << ") \n";
+
+        std::vector<std::string>::const_iterator it;
+        for (it = data.m_messages.begin(); it != data.m_messages.end(); ++it) {
+            out << *it << "\n";
+        }
+        return out;
+
 }
