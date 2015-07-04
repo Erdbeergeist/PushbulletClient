@@ -11,6 +11,8 @@
 #include <stdio.h>
 #include "rapidjson/document.h"
 #include "rapidjson/reader.h"
+#include "rapidjson/writer.h"
+#include "rapidjson/stringbuffer.h"
 //#include "sys/types.h"
 #include <fstream>
 
@@ -22,9 +24,6 @@
 
 
 typedef websocketpp::client<websocketpp::config::asio_tls> client;
-
-
-
 typedef websocketpp::lib::shared_ptr<boost::asio::ssl::context> context_ptr;
 
 
@@ -33,9 +32,13 @@ using std::fstream;
 using namespace rapidjson;
 
 //important Flags and Variables
+extern bool DEVICE_CHANGED,PUSH_CHANGED,STREAM_EVENT,DISPLAY_STREAM_MSG;
+
+
 extern char JSONcontent[];
-extern string authorization_header,access_token,pushbulletbaseurl,pushbulletwebsocket,pb_devices,pb_users,pb_pushes;
-extern vector<string> pbmessages;
+extern string authorization_header,access_token,pushbulletbaseurl,pushbulletwebsocket,pb_devices,pb_users,pb_pushes,
+              latest_message;
+
 
 
 //Callback Function for CURL
@@ -45,12 +48,20 @@ string GetFullURL(string identifier);
 
 string getAccessToken();
 
+void DisplayGreeting();
+
+void NewStremMessage(string message_content);
+
+void DisplayStremMessage(string message_content,pair<string,string> type);
+
+pair<string,string> GetStreamMessageType(string message);
+
+
 //Buffer Struct to hold the Result
 struct BufferStruct{
     char * buffer;
     size_t size;
 };
-
 
 //Holds the neccessary Information to authenticate
 struct AuthorizationHeader{
@@ -58,7 +69,7 @@ struct AuthorizationHeader{
     string access_token;
 };
 
-
+//Handle the setting of the required custom HTTP-Headers for interacting with the pushbullet API
 class CustomHTTPHeader{
 public:
     CustomHTTPHeader(CURL* curl, AuthorizationHeader AuthHeader);
@@ -74,9 +85,13 @@ private:
     struct curl_slist* chunk;
 };
 
+/*  Holds the Connection Metadata of the wss websocket Connection, also provides Callback functions for various
+    Events */
 class Connection_Metadata {
 public:
     typedef websocketpp::lib::shared_ptr<Connection_Metadata> ptr;
+
+    vector<string> m_messages;
 
     Connection_Metadata(int id, websocketpp::connection_hdl hdl, string uri);
 
@@ -105,11 +120,13 @@ private:
     string m_uri;
     string m_server;
     string m_error_reason;
-    vector<string> m_messages;
+
 };
 
+//Overload the << Operator for Connection Metadata
 ostream& operator<< (ostream & out, Connection_Metadata const& data);
 
+//Websocket Endpoint, takes care of connecting(capable of multiple connections),closing and providing access to the connection
 class Websocket_Endpoint{
 public:
     Websocket_Endpoint();
@@ -131,5 +148,7 @@ private:
     int m_next_id;
 };
 
+string GetMessage(Connection_Metadata const& data, int message_nr);
 
+int GetNumberofMessages(Connection_Metadata const& data);
 #endif // CORE_H

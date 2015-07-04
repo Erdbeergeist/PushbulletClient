@@ -1,6 +1,9 @@
 #include "core.h"
 
 //Set the Variables and Flags
+bool DEVICE_CHANGED=false,PUSH_CHANGED=false,STREAM_EVENT=false,DISPLAY_STREAM_MSG=true;
+
+
 char JSONcontent[] = "Content-Type: application/json";
 std::string authorization_header = "Authorization: Bearer ",
 access_token="",
@@ -9,7 +12,8 @@ pushbulletwebsocket = "wss://stream.pushbullet.com/websocket/",
 pb_devices = "devices",
 pb_users = "users/me",
 pb_pushes = "pushes";
-vector<string> pbmessages;
+
+
 // Function to pass to CURL, fills BufferStruct
 size_t WriteMemoryCallback(void *ptr, size_t size, size_t nmemb, void *data){
 
@@ -27,6 +31,8 @@ size_t WriteMemoryCallback(void *ptr, size_t size, size_t nmemb, void *data){
     }
     return realsize;
 }
+
+
 
 /**
  * @brief Retrieve acces token from file, or ask for it if no file exists
@@ -58,7 +64,7 @@ string getAccessToken() {
             cout << "Please enter your access_token, you can find it on https://www.pushbullet.com under Account Settings." << endl;
             firstTry = false;
         } else {
-            cout << "Incorrect token, please try again!" << endl;
+            cout << "Invalid token, please try again!" << endl;
         }
         getline(cin, result);
         outfile << result;
@@ -70,6 +76,86 @@ string getAccessToken() {
 
 string GetFullURL(string identifier){
     return pushbulletbaseurl.append(identifier);
+}
+
+void DisplayGreeting(){
+    cout<<"Welcome to Erdbeergeist's Pushbullet Client\nsource available on https://github.com/Erdbeergeist/PushbulletClient\n";
+}
+
+
+void DisplayStremMessage(string message_content,pair<string,string> type){
+
+    Document msg,submsg;
+    msg.Parse(message_content.c_str());
+    if (strcmp(type.first.c_str(),"tickle")==0 && strcmp(type.second.c_str(),"push")==0)return;
+    cout<<"\n";
+    StringBuffer sb;
+    Writer<StringBuffer> writer(sb);
+    msg["push"].Accept(writer);
+    submsg.Parse(sb.GetString());
+    if(strcmp(submsg["type"].GetString(),"clip")==0) cout<<"Clipboard: "<<submsg["body"].GetString()<<endl;
+    else if(strcmp(submsg["type"].GetString(),"dismissal")!=0){
+    cout<<"New Message:\nType: "<< type.first<<"\n"
+        <<"Subtype: "<<type.second<<endl;
+    if (strcmp(type.second.c_str(),"push")==0 && strcmp(type.first.c_str(),"push")==0){
+
+
+        //cout<<msg["push"].IsObject()<<endl;
+
+        //cout<<submsg["iden"].GetType()<<endl;
+        //submsg.Parse(msg["push"].GetString());
+        //for (Value::ConstMemberIterator m = msg["push"].MemberBegin(); m != msg["push"].MemberEnd(); ++m) {
+           // if (cout << m->name.GetString()<<": " << (if (m->value.IsString()) m->value.GetString()) else "" )<< endl;
+       // }
+
+       cout<<"Notification:\n"
+            <<"type: "<<submsg["type"].GetString()<<"\n"
+            <<"souce device iden: "<<submsg["source_device_iden"].GetString()<<"\n"
+            <<"application name "<<submsg["application_name"].GetString()<<"\n"
+            <<"title: "<<submsg["title"].GetString()<<"\n"
+            <<"body: \n"<<submsg["body"].GetString()<<"\n";
+            //<<"created: "<<submsg["created"].GetDouble()<<"\n";
+       }
+    }
+
+    cout<<"Enter Command: ";
+
+}
+
+void NewStreamMessage(string message_content){
+
+    pair<string,string> type = GetStreamMessageType(message_content);
+    if (type.first == "nop") return;
+    else if (type.first == "tickle" && type.second == "push") PUSH_CHANGED = true;
+    else if (type.first == "tickle" && type.second == "device") DEVICE_CHANGED = true;
+    else if (type.first == "push" && type.second == "push") STREAM_EVENT=true;
+    if (DISPLAY_STREAM_MSG==true) DisplayStremMessage(message_content,type);
+}
+
+pair<string,string> GetStreamMessageType(string smessage){
+    pair<string,string> type;
+    Document message;
+
+    message.Parse(smessage.c_str());
+
+    if (strcmp(message["type"].GetString(),"nop") ==0){
+        type.first = "nop";
+        type.second = "";
+   }
+    else if (strcmp(message["type"].GetString(),"tickle") == 0){
+        type.first="tickle";
+        if (strcmp(message["subtype"].GetString(),"device")==0){
+           type.second= "device";
+        }
+        if (strcmp(message["subtype"].GetString(),"push")==0){
+            type.second= "push";
+        }
+    }
+    else if (strcmp(message["type"].GetString(),"push")==0){
+        type.first="push";
+        type.second="push";
+    }
+   return type;
 }
 
 /*CustomHTTPHeader Functions
@@ -232,11 +318,12 @@ void Connection_Metadata::On_Close(client *c, websocketpp::connection_hdl hdl){
 
 void Connection_Metadata::On_Message(websocketpp::connection_hdl, client::message_ptr msg){
     if (msg->get_opcode() == websocketpp::frame::opcode::text) {
-                m_messages.push_back("<< " + msg->get_payload());
-                pbmessages.push_back(msg->get_payload());
-            }
+                m_messages.push_back(msg->get_payload());
+                NewStreamMessage(msg->get_payload());
+
+       }
     else {
-                m_messages.push_back("<< " + websocketpp::utility::to_hex(msg->get_payload()));
+                m_messages.push_back(websocketpp::utility::to_hex(msg->get_payload()));
             }
 }
 
@@ -256,18 +343,29 @@ void Connection_Metadata::Record_Sent_Messages(string message){
     m_messages.push_back(">> " + message);
 }
 
+string GetMessage(Connection_Metadata const& data,int message_nr){
+    if (data.m_messages.size()> message_nr-1) return data.m_messages[message_nr-1];
+    return "";
+}
+
+int GetNumberofMessages(Connection_Metadata const& data){
+    return data.m_messages.size();
+}
 
 ostream& operator<< (ostream & out, Connection_Metadata const& data){
     out << "> URI: " << data.m_uri << "\n"
         << "> Status: " << data.m_status << "\n"
         << "> Remote Server: " << (data.m_server.empty() ? "None Specified" : data.m_server) << "\n"
         << "> Error/close reason: " << (data.m_error_reason.empty() ? "N/A" : data.m_error_reason);
-    out << "> Messages Processed: (" << data.m_messages.size() << ") \n";
+    /*out << "> Messages Processed: (" << data.m_messages.size() << ") \n";
 
         std::vector<std::string>::const_iterator it;
         for (it = data.m_messages.begin(); it != data.m_messages.end(); ++it) {
+
             out << *it << "\n";
-        }
+        }*/
+
+
         return out;
 
 }

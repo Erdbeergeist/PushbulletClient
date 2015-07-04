@@ -7,6 +7,7 @@
 #include "core.h"
 
 int main(int argc, char *argv[]){
+    DisplayGreeting();
 
     access_token = getAccessToken();
 
@@ -16,6 +17,7 @@ int main(int argc, char *argv[]){
     // get a CURL handle to perform the requests on
     CURL * curl;
     CURLcode result;
+
     // start the CURL session
     curl = curl_easy_init();
 
@@ -25,12 +27,10 @@ int main(int argc, char *argv[]){
         AuthorizationHeader AuthHeader;
         AuthHeader.prefix = authorization_header;
         AuthHeader.access_token = access_token;
-        //cout<<AuthHeader.authorization<<endl;
+
         CustomHTTPHeader header(curl, AuthHeader);
 
         Websocket_Endpoint endpoint;
-
-
 
         result = header.SetCustomHeader();
 
@@ -75,18 +75,22 @@ int main(int argc, char *argv[]){
         Document user;
 
         user.Parse(output.buffer);
-        cout<<user["name"].GetString()<<endl;
+        cout<<"PushBullet User:\t"<<user["name"].GetString()<<endl;
         bool quit=false;
         string input;
-        int msize = 0;
-        int baseid = endpoint.Connect(pushbulletwebsocket.append(access_token));
+        int id = endpoint.Connect(pushbulletwebsocket.append(access_token));
+        if (id != -1) {
+            std::cout << "> Created connection with id " << id << std::endl;
+        }
+
         while (!quit) {
-                if (pbmessages.size()>msize){
-                    msize=pbmessages.size();
-                    cout<<pbmessages[pbmessages.size()-1]<<endl;
-                }
-                /*cout << "Enter Command: ";
-                //getline(cin, input);
+
+
+
+
+
+                cout << "Enter Command: ";
+                getline(cin,input);
 
                 if (input == "quit") quit = true;
                 else if (input == "help") {
@@ -98,15 +102,15 @@ int main(int argc, char *argv[]){
                         << "quit: Exit the program\n"
                         << std::endl;
                 }
-                else if (input.substr(0,7) == "connect") {
+                /*else if (input.substr(0,7) == "connect") {
                     int id = endpoint.Connect(pushbulletwebsocket.append(access_token));
                     if (id != -1) {
                         std::cout << "> Created connection with id " << id << std::endl;
                     }
-                }
+                }*/
                 else if (input.substr(0,4) == "show") {
                     int id = atoi(input.substr(5).c_str());
-                    cout<<id<<endl;
+
                     Connection_Metadata::ptr metadata = endpoint.Get_Metadata(id);
                     if (metadata) {
                         std::cout << *metadata << std::endl;
@@ -115,7 +119,7 @@ int main(int argc, char *argv[]){
                         std::cout << "> Unknown connection id " << id << std::endl;
                     }
                 }
-                else if (input.substr(0,5) == "close") {
+                /*else if (input.substr(0,5) == "close") {
                     std::stringstream ss(input);
 
                     std::string cmd;
@@ -127,10 +131,10 @@ int main(int argc, char *argv[]){
                     std::getline(ss,reason);
 
                     endpoint.Close(id, close_code,reason);
-                }
+                }*/
                else {
                     std::cout << "> Unrecognized Command" << std::endl;
-                }*/
+                }
             }
 
         }
